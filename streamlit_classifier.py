@@ -130,7 +130,7 @@ def preprocess_image(image):
 
 
     # Convert to numpy array and normalize
-    image_array = np.array(image_array.astype(np.float(np.float32))) / 255.0
+    image_array = np.array(image_array.astype(np.float32)) / 255.0
     
     # # Add batch dimension
     # image_array = np.expand_dims(image_array, axis=0)
