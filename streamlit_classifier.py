@@ -129,7 +129,7 @@ def preprocess_image(image):
     # if image.mode != 'RGB':
     #     image = image.convert('RGB')
 
-    image = Image.open("/content/papaya-plant-500x500.jpg").convert("RGB")
+    # image = Image.open("/content/papaya-plant-500x500.jpg").convert("RGB")
 
     size = (224, 224)
     image = ImageOps.fit(image, size, Image.Resampling.LANCZOS)
@@ -146,7 +146,7 @@ def preprocess_image(image):
     # # Add batch dimension
     # image_array = np.expand_dims(image_array, axis=0)
     
-    return image_array
+    return data
 
 def classify_image_with_savedmodel(image, model_info):
     """
@@ -269,13 +269,13 @@ def main():
                     st.write(f"**Classes:** {', '.join(model_info['labels'])}")
                     st.write(f"**Model Type:** TensorFlow SavedModel")
                     
-                    # Display model architecture summary if available
-                    try:
-                        model_summary = []
-                        model_info['model'].summary(print_fn=lambda x: model_summary.append(x))
-                        st.code('\n'.join(model_summary[:10]) + '\n...' if len(model_summary) > 10 else '\n'.join(model_summary))
-                    except:
-                        st.write("Model architecture details not available")
+                    # # Display model architecture summary if available
+                    # try:
+                    #     model_summary = []
+                    #     model_info['model'].summary(print_fn=lambda x: model_summary.append(x))
+                    #     st.code('\n'.join(model_summary[:10]) + '\n...' if len(model_summary) > 10 else '\n'.join(model_summary))
+                    # except:
+                    #     st.write("Model architecture details not available")
             else:
                 st.error("❌ Failed to load SavedModel. Please check the model path.")
                 st.stop()
@@ -351,7 +351,7 @@ def process_images(uploaded_files):
         
         try:
             # Load and preprocess image
-            image = Image.open(uploaded_file)
+            image = Image.open(uploaded_file).convert("RGB")
             
             # Classify image
             predictions = classify_image_with_savedmodel(image, st.session_state.model)
