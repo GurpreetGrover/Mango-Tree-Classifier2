@@ -6,6 +6,8 @@ import requests
 import json
 from datetime import datetime
 import io
+import tempfile
+import os
 
 # Configure Streamlit page
 st.set_page_config(
@@ -72,35 +74,43 @@ if 'model_loaded' not in st.session_state:
 if 'classification_results' not in st.session_state:
     st.session_state.classification_results = []
 
-# Configuration
-MODEL_URL = st.secrets.get("TEACHABLE_MACHINE_URL")
+# Configuration - Update these paths for your SavedModel
+SAVEDMODEL_PATH = st.secrets.get("SAVEDMODEL_PATH", "./models/mango_classifier_savedmodel")
+# Alternative: You can also use a model from TensorFlow Hub or cloud storage
+# SAVEDMODEL_PATH = "gs://your-bucket/models/mango_classifier"
+# SAVEDMODEL_PATH = "https://tfhub.dev/your-model/1"
 
 @st.cache_resource
-def load_teachable_machine_model(model_url):
+def load_tensorflow_savedmodel(model_path):
     """
-    Load TensorFlow.js model from Teachable Machine
+    Load TensorFlow SavedModel from local path or URL
     JavaScript equivalent: loadModel() function
     """
     try:
-        # For TensorFlow.js models, we need to download and convert
-        model_json_url = f"{model_url}model.json"
-        metadata_url = f"{model_url}metadata.json"
+        st.info("🔄 Loading TensorFlow SavedModel...")
         
-        # Download model metadata to get class labels
-        metadata_response = requests.get(metadata_url)
-        metadata = metadata_response.json()
+        # Load the SavedModel
+        model = tf.keras.models.load_model(model_path)
         
-        # For this demo, we'll simulate the model loading
-        # In a real scenario, you'd need to convert the TF.js model to TensorFlow format
-        class_labels = metadata.get('labels', ['mango_tree', 'not_mango_tree'])
+        # For Teachable Machine models, class labels are typically ordered
+        # You can customize this based on your specific model
+        class_labels = ['mango_tree', 'not_mango_tree']  # Adjust as needed
+        
+        st.success("✅ SavedModel loaded successfully!")
         
         return {
+            'model': model,
             'labels': class_labels,
             'loaded': True,
-            'url': model_url
+            'path': model_path
         }
+        
     except Exception as e:
-        st.error(f"Error loading model: {str(e)}")
+        st.error(f"❌ Error loading SavedModel: {str(e)}")
+        st.error("💡 Tips:")
+        st.error("  - Make sure the model path is correct")
+        st.error("  - Ensure the SavedModel directory contains saved_model.pb")
+        st.error("  - Check that all required files are present")
         return None
 
 def preprocess_image(image):
@@ -123,50 +133,54 @@ def preprocess_image(image):
     
     return image_array
 
-def classify_image_simulation(image, model_info):
+def classify_image_with_savedmodel(image, model_info):
     """
-    Simulate image classification (since we can't directly use TF.js model)
+    Real image classification using TensorFlow SavedModel
     JavaScript equivalent: classifyImage() function
-    
-    In a real implementation, you would:
-    1. Convert TF.js model to TensorFlow format
-    2. Load with tf.keras.models.load_model()
-    3. Make actual predictions
     """
-    # Simulate predictions based on simple image analysis
-    # This is just for demo purposes
-    
-    # Convert image to analyze basic properties
-    img_array = np.array(image)
-    
-    # Simple heuristic: check for green content (mango trees are green)
-    green_ratio = np.mean(img_array[:, :, 1]) / 255.0  # Green channel
-    
-    # Simulate confidence based on green content
-    if green_ratio > 0.4:
-        mango_confidence = min(0.9, green_ratio + np.random.normal(0, 0.1))
-        not_mango_confidence = 1 - mango_confidence
-    else:
-        not_mango_confidence = min(0.9, (1 - green_ratio) + np.random.normal(0, 0.1))
-        mango_confidence = 1 - not_mango_confidence
-    
-    # Ensure probabilities sum to 1
-    total = mango_confidence + not_mango_confidence
-    mango_confidence /= total
-    not_mango_confidence /= total
-    
-    predictions = [
-        {
-            'className': 'mango_tree',
-            'probability': float(mango_confidence)
-        },
-        {
-            'className': 'not_mango_tree', 
-            'probability': float(not_mango_confidence)
-        }
-    ]
-    
-    return predictions
+    try:
+        if not model_info or 'model' not in model_info:
+            raise ValueError("Model not properly loaded")
+        
+        model = model_info['model']
+        labels = model_info['labels']
+        
+        # Preprocess the image for the model
+        processed_image = preprocess_image(image)
+        
+        # Make prediction using the SavedModel
+        with st.spinner("🔍 Classifying image..."):
+            predictions = model.predict(processed_image, verbose=0)
+        
+        # Handle different output formats
+        if len(predictions.shape) == 2:  # Shape: (1, num_classes)
+            prediction_probs = predictions[0]
+        else:  # Shape: (num_classes,)
+            prediction_probs = predictions
+        
+        # Convert predictions to the expected format
+        prediction_results = []
+        for i, prob in enumerate(prediction_probs):
+            if i < len(labels):
+                prediction_results.append({
+                    'className': labels[i],
+                    'probability': float(prob)
+                })
+        
+        # Ensure probabilities sum to 1 (normalize if needed)
+        total_prob = sum(pred['probability'] for pred in prediction_results)
+        if total_prob > 0:
+            for pred in prediction_results:
+                pred['probability'] = pred['probability'] / total_prob
+        
+        # Sort by probability (highest first) to match original behavior
+        prediction_results.sort(key=lambda x: x['probability'], reverse=True)
+        
+        return prediction_results
+        
+    except Exception as e:
+        st.error(f"❌ Error during classification: {str(e)}")
+        return None
 
 def display_predictions(predictions, image_name):
     """
@@ -216,9 +230,8 @@ def main():
     Main Streamlit application
     JavaScript equivalent: TeachableMachineImageClassifier component
     """
-
     # Header
-    st.markdown('<h1 class="main-header">🥭 Mango Tree Classifier</h1>', 
+    st.markdown('<h1 class="main-header">🥭 Teachable Machine Mango Tree Classifier</h1>', 
                 unsafe_allow_html=True)
     st.markdown('<p style="text-align: center; color: #666; font-size: 18px;">Upload images to classify mango trees using AI</p>', 
                 unsafe_allow_html=True)
@@ -226,13 +239,27 @@ def main():
     # Load model on first run
     if not st.session_state.model_loaded:
         with st.spinner("Loading AI model..."):
-            model_info = load_teachable_machine_model(MODEL_URL)
+            model_info = load_tensorflow_savedmodel(SAVEDMODEL_PATH)
             if model_info:
                 st.session_state.model = model_info
                 st.session_state.model_loaded = True
-                st.success("✅ Model loaded successfully!")
+                st.success("✅ SavedModel loaded successfully!")
+                
+                # Display model info
+                with st.expander("📊 Model Information"):
+                    st.write(f"**Model Path:** `{SAVEDMODEL_PATH}`")
+                    st.write(f"**Classes:** {', '.join(model_info['labels'])}")
+                    st.write(f"**Model Type:** TensorFlow SavedModel")
+                    
+                    # Display model architecture summary if available
+                    try:
+                        model_summary = []
+                        model_info['model'].summary(print_fn=lambda x: model_summary.append(x))
+                        st.code('\n'.join(model_summary[:10]) + '\n...' if len(model_summary) > 10 else '\n'.join(model_summary))
+                    except:
+                        st.write("Model architecture details not available")
             else:
-                st.error("❌ Failed to load model. Please check the model URL.")
+                st.error("❌ Failed to load SavedModel. Please check the model path.")
                 st.stop()
     
     # Upload section
@@ -272,10 +299,16 @@ def main():
         # Empty state
         st.markdown("### 💡 Instructions")
         st.info("""
-        1. 📁 Upload one or more image files using the file uploader above
-        2. 🔍 Click 'Classify Images' to analyze your photos
-        3. 📊 View the classification results with confidence scores
-        4. 🥭 The AI will tell you if each image contains a mango tree or not
+        1. 📁 **Prepare your SavedModel**: Make sure you have a TensorFlow SavedModel directory
+        2. 📂 **Update model path**: Set `SAVEDMODEL_PATH` in your code or Streamlit secrets
+        3. 🔍 **Upload images**: Use the file uploader above to select your images
+        4. 📊 **View results**: Click 'Classify Images' to analyze your photos
+        5. 🥭 **Get predictions**: The AI will classify each image with confidence scores
+        
+        **SavedModel Requirements:**
+        - Model should accept images of shape (224, 224, 3)
+        - Input should be normalized to [0, 1] range
+        - Output should be class probabilities
         """)
 
 def process_images(uploaded_files):
@@ -303,7 +336,7 @@ def process_images(uploaded_files):
             image = Image.open(uploaded_file)
             
             # Classify image
-            predictions = classify_image_simulation(image, st.session_state.model)
+            predictions = classify_image_with_savedmodel(image, st.session_state.model)
             
             if predictions:
                 # Create result object
@@ -340,7 +373,7 @@ def display_result_card(result):
         
         with col1:
             # Display image
-            st.image(result['image'], caption=result['file_name'], use_container_width=True)
+            st.image(result['image'], caption=result['file_name'], use_column_width=True)
         
         with col2:
             # File info
