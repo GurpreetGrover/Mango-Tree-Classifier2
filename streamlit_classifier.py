@@ -185,13 +185,13 @@ def classify_image_with_savedmodel(image, model_info):
         
         # Convert predictions to the expected format
         prediction_results = []
-        for i, prob in enumerate(prediction_probs):
-            if i < len(labels):
-                prediction_results.append({
-                    'className': labels[i],
-                    'probability': float(prob)
-                })
-        
+        # for i, prob in enumerate(prediction_probs):
+        # if i < len(labels):
+        prediction_results.append({
+            'className': labels[i],
+            'probability': float(prob)
+        })
+    
         # Ensure probabilities sum to 1 (normalize if needed)
         total_prob = sum(pred['probability'] for pred in prediction_results)
         if total_prob > 0:
