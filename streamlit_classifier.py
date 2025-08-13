@@ -175,10 +175,10 @@ def classify_image_with_savedmodel(image, model_info):
 
         prediction_results = []
 
-        for class in prediction_tensor:
+        for index in prediction_tensor:
             prediction_results.append({
-                'className': labels[class],
-                'probability': prediction_tensor[0][class]
+                'className': labels[index],
+                'probability': prediction_tensor[0][index]
                 })
 
 
