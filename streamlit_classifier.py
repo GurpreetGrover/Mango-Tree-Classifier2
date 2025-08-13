@@ -175,10 +175,10 @@ def classify_image_with_savedmodel(image, model_info):
         st.write("prediction tensor extracted")
         prediction_results = []
 
-        for index, prob in enumerate(prediction_tensor):
+        for index, prob in enumerate(prediction_tensor[0]):
             prediction_results.append({
                 'className': labels[index],
-                'probability': prob
+                'probability': float(f'{np.float32(prob):.2f}')
                 })
         st.write("class prob stored")
 
