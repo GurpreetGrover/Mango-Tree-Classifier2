@@ -172,9 +172,14 @@ def classify_image_with_savedmodel(image, model_info):
 
         # Processing output of model classification
         prediction_tensor = predictions['sequential_3']
-        index = np.argmax(prediction_tensor)
-        class_name = labels[index]
-        prediction_probs = prediction_tensor[0][index]
+
+        prediction_results = []
+
+        for class in prediction_tensor:
+            prediction_results.append({
+                'className': labels[class],
+                'probability': prediction_tensor[0][class]
+                })
 
 
         # # Handle different output formats
@@ -186,11 +191,11 @@ def classify_image_with_savedmodel(image, model_info):
         # Convert predictions to the expected format
         prediction_results = []
         # for i, prob in enumerate(prediction_probs):
-        # if i < len(labels):
-        prediction_results.append({
-            'className': labels[i],
-            'probability': float(prob)
-        })
+            # if i < len(labels):
+                # prediction_results.append({
+                #     'className': class_name,
+                #     'probability': float(prediction_probs)
+                # })
     
         # Ensure probabilities sum to 1 (normalize if needed)
         total_prob = sum(pred['probability'] for pred in prediction_results)
