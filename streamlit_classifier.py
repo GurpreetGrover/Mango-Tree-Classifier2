@@ -91,7 +91,7 @@ def load_tensorflow_savedmodel(model_path):
         st.info("🔄 Loading TensorFlow SavedModel...")
         
         # Load the SavedModel
-        model = keras.layers.TFSMLayer("model.savedmodel", call_endpoint='serving_default')
+        model = keras.layers.TFSMLayer(SAVEDMODEL_PATH, call_endpoint='serving_default')
         
         # For Teachable Machine models, class labels are typically ordered
         # You can customize this based on your specific model
