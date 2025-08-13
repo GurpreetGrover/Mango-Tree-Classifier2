@@ -168,13 +168,20 @@ def classify_image_with_savedmodel(image, model_info):
         # Make prediction using the SavedModel
         with st.spinner("🔍 Classifying image..."):
             predictions = model(processed_image)#, verbose=0)
-        st.write("prediction daone")
+        st.write("prediction done")
 
-        # Handle different output formats
-        if len(predictions.shape) == 2:  # Shape: (1, num_classes)
-            prediction_probs = predictions[0]
-        else:  # Shape: (num_classes,)
-            prediction_probs = predictions
+        # Processing output of model classification
+        prediction_tensor = prediction['sequential_3']
+        index = np.argmax(prediction_tensor)
+        class_name = class_names[index]
+        prediction_probs = prediction_tensor[0][index]
+
+
+        # # Handle different output formats
+        # if len(predictions.shape) == 2:  # Shape: (1, num_classes)
+        #     prediction_probs = predictions[0]
+        # else:  # Shape: (num_classes,)
+        #     prediction_probs = predictions
         
         # Convert predictions to the expected format
         prediction_results = []
