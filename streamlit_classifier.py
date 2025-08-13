@@ -406,7 +406,7 @@ def display_result_card(result):
         
         with col1:
             # Display image
-            st.image(result['image'], caption=result['file_name'], use_column_width=True)
+            st.image(result['image'], caption=result['file_name'], use_container_width=True)
         
         with col2:
             # File info
