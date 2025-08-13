@@ -2,7 +2,8 @@ import streamlit as st
 import tensorflow as tf
 from tensorflow import keras
 import numpy as np
-from PIL import Image
+# from PIL import Image
+from PIL import Image, ImageOps
 import requests
 import json
 from datetime import datetime
@@ -119,18 +120,26 @@ def preprocess_image(image):
     Preprocess image for prediction
     JavaScript equivalent: Image preprocessing in classifyImage()
     """
-    # Resize image to model input size (typically 224x224 for Teachable Machine)
-    image = image.resize((224, 224))
+
+    data = np.ndarray(shape=(1, 224, 224, 3), dtype=np.float32)
+    # # Resize image to model input size (typically 224x224 for Teachable Machine)
+    # image = image.resize((224, 224))
     
     # Convert to RGB if not already
     if image.mode != 'RGB':
         image = image.convert('RGB')
-    
+
+    size = (224, 224)
+    image = ImageOps.fit(image, size, Image.Resampling.LANCZOS)
+
+
     image_array = np.asarray(image)
 
 
     # Convert to numpy array and normalize
     image_array = np.array(image_array.astype(np.float32)) / 255.0
+
+    data[0] = image_array
     
     # # Add batch dimension
     # image_array = np.expand_dims(image_array, axis=0)
