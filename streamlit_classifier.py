@@ -156,7 +156,7 @@ def classify_image_with_savedmodel(image, model_info):
         # Make prediction using the SavedModel
         with st.spinner("🔍 Classifying image..."):
             predictions = model(processed_image, verbose=0)
-        
+        st.write("prediction daone")
         # Handle different output formats
         if len(predictions.shape) == 2:  # Shape: (1, num_classes)
             prediction_probs = predictions[0]
