@@ -173,7 +173,7 @@ def classify_image_with_savedmodel(image, model_info):
         # Processing output of model classification
         prediction_tensor = predictions['sequential_3']
         index = np.argmax(prediction_tensor)
-        class_name = class_names[index]
+        class_name = labels[index]
         prediction_probs = prediction_tensor[0][index]
 
 
