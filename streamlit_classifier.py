@@ -95,7 +95,7 @@ def load_tensorflow_savedmodel(model_path):
         
         # For Teachable Machine models, class labels are typically ordered
         # You can customize this based on your specific model
-        class_labels = ['mango_tree', 'not_mango_tree']  # Adjust as needed
+        class_labels = ['mango_tree', 'not_mango_tree'] 
         
         st.success("✅ SavedModel loaded successfully!")
         
@@ -126,11 +126,14 @@ def preprocess_image(image):
     if image.mode != 'RGB':
         image = image.convert('RGB')
     
+    image_array = np.asarray(image)
+
+
     # Convert to numpy array and normalize
-    image_array = np.array(image) / 255.0
+    image_array = np.array(image_array.astype(np.float(np.float32))) / 255.0
     
-    # Add batch dimension
-    image_array = np.expand_dims(image_array, axis=0)
+    # # Add batch dimension
+    # image_array = np.expand_dims(image_array, axis=0)
     
     return image_array
 
