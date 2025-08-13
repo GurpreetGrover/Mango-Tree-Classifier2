@@ -152,6 +152,7 @@ def classify_image_with_savedmodel(image, model_info):
         # Preprocess the image for the model
         processed_image = preprocess_image(image)
         
+        st.write("image preprocessed for classification")
         # Make prediction using the SavedModel
         with st.spinner("🔍 Classifying image..."):
             predictions = model(processed_image, verbose=0)
