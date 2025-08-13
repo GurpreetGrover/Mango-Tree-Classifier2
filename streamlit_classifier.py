@@ -180,6 +180,7 @@ def classify_image_with_savedmodel(image, model_info):
                 'className': labels[index],
                 'probability': prediction_tensor[0][index]
                 })
+        st.write("class prob stored")
 
 
         # # Handle different output formats
@@ -189,7 +190,7 @@ def classify_image_with_savedmodel(image, model_info):
         #     prediction_probs = predictions
         
         # Convert predictions to the expected format
-        prediction_results = []
+        # prediction_results = []
         # for i, prob in enumerate(prediction_probs):
             # if i < len(labels):
                 # prediction_results.append({
@@ -368,6 +369,8 @@ def process_images(uploaded_files):
             # Classify image
             predictions = classify_image_with_savedmodel(image, st.session_state.model)
             
+            st.write("all images classified")
+
             if predictions:
                 # Create result object
                 result = {
