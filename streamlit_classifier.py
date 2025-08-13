@@ -1,5 +1,6 @@
 import streamlit as st
 import tensorflow as tf
+from tensorflow import keras
 import numpy as np
 from PIL import Image
 import requests
@@ -90,7 +91,7 @@ def load_tensorflow_savedmodel(model_path):
         st.info("🔄 Loading TensorFlow SavedModel...")
         
         # Load the SavedModel
-        model = tf.keras.models.load_model(model_path)
+        model = keras.layers.TFSMLayer("model.savedmodel", call_endpoint='serving_default')
         
         # For Teachable Machine models, class labels are typically ordered
         # You can customize this based on your specific model
