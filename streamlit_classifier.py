@@ -172,7 +172,7 @@ def classify_image_with_savedmodel(image, model_info):
 
         # Processing output of model classification
         prediction_tensor = predictions['sequential_3']
-
+        st.write("prediction tensor extracted")
         prediction_results = []
 
         for index in prediction_tensor:
