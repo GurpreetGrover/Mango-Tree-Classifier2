@@ -308,8 +308,10 @@ def main():
         st.markdown(f"**{len(uploaded_files)} file(s) uploaded**")
         
         # Process button
-        if st.button("🔍 Classify Images", type="primary"):
-            process_images(uploaded_files)
+        process_images(uploaded_files)
+        
+        # if st.button("🔍 Classify Images", type="primary"):
+        #     process_images(uploaded_files)
     
     st.markdown('</div>', unsafe_allow_html=True)
     
