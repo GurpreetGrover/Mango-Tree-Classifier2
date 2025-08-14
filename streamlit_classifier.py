@@ -418,6 +418,13 @@ def classify_image_with_savedmodel(image, model_info):
 def main():
 
 
+
+    if 'classification_results' not in st.session_state:
+        st.session_state.classification_results = []
+    if 'duplicate_pairs' not in st.session_state:
+        st.session_state.duplicate_pairs = []
+
+
     # if st.session_state.clear_flag:
     #     st.session_state.clear_flag = False
     #     st.rerun()
