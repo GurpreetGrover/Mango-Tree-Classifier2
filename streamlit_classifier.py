@@ -418,9 +418,9 @@ def classify_image_with_savedmodel(image, model_info):
 def main():
 
 
-    if st.session_state.clear_flag:
-        st.session_state.clear_flag = False
-        st.rerun()
+    # if st.session_state.clear_flag:
+    #     st.session_state.clear_flag = False
+    #     st.rerun()
 
     """Main Streamlit application"""
     # Header
@@ -516,7 +516,7 @@ def main():
             st.session_state.classification_results = []
             st.session_state.duplicate_pairs = []
             st.session_state.uploader_key += 1
-            st.session_state.clear_flag = True
+            # st.session_state.clear_flag = True
             st.rerun()
         # Display results
         for result in reversed(st.session_state.classification_results):  # Show newest first
