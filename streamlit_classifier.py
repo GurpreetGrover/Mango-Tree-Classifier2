@@ -505,6 +505,7 @@ def main():
         
         # Clear results button
         if st.button("🗑️ Clear All Results"):
+            predictions = []
             st.session_state.classification_results = []
             st.session_state.duplicate_pairs = []
             st.session_state.uploader_key += 1
@@ -641,19 +642,22 @@ def display_duplicate_pair(pair):
     
     with action_col1:
         if st.button(f"Keep Both", key=f"keep_both_{pair['id']}"):
+            st.session_state.duplicate_pairs.remove(pair)
             st.info("Both images marked as kept")
     
     with action_col2:
         if st.button(f"Remove Image 1", key=f"remove_1_{pair['id']}"):
-            remove_image_from_results(result1['id'])
-            st.session_state.duplicate_pairs = [p for p in st.session_state.duplicate_pairs if p['id'] != pair['id']]
+            st.session_state.classification_results.remove(result1)
+            # remove_image_from_results(result1['id'])
+            st.session_state.duplicate_pairs.remove(pair)# = [p for p in st.session_state.duplicate_pairs if p['id'] != pair['id']]
             st.success(f"Removed {result1['file_name']}")
             st.rerun()
     
     with action_col3:
         if st.button(f"Remove Image 2", key=f"remove_2_{pair['id']}"):
-            remove_image_from_results(result2['id'])
-            st.session_state.duplicate_pairs = [p for p in st.session_state.duplicate_pairs if p['id'] != pair['id']]
+            st.session_state.classification_results.remove(result2)
+            # remove_image_from_results(result2)
+            st.session_state.duplicate_pairs.remove(pair)# = [p for p in st.session_state.duplicate_pairs if p['id'] != pair['id']]
             st.success(f"Removed {result2['file_name']}")
             st.rerun()
     
