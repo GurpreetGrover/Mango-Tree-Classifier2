@@ -125,29 +125,28 @@ def extract_gps_from_exif(image):
     Returns: dict with latitude, longitude or None if no GPS data
     """
     try:
-        exif_data = image.getexif()
+        exif_data = image._getexif()
         if not exif_data:
             return None
         
         # Look for GPS info in EXIF data
         gps_info = None
+        gps_info = exif_data.get(34853)
 
-        for tag, value in exif_data.items():
-            tag_name = TAGS.get(tag, tag)
-            if tag_name == "GPSInfo":
-                gps_info = value
+        if isinstance(gps_info, dict):
+            st.write(f"  GPSInfo value is not a dictionary, cannot parse GPS tags directly. Value: {gps_info}")
+            return None
+
+        gps_data = {}
+        for tag, gps_value in gps_info.items():
+            tag_name = GPSTAGS.get(tag, tag)
+            gps_data[gps_tag_name] = gps_value
+            # if tag_name == "GPSInfo":
+                # gps_info = value
                 # for gps_tag in value:
                 #     gps_tag_name = GPSTAGS.get(gps_tag, gps_tag)
                 #     gps_data[gps_tag_name] = value[gps_tag]
-                break
-
-        if not gps_info:
-            return None
-        
-        gps_data = {}
-        for gps_tag in gps_info:
-            gps_tag_name = GPSTAGS.get(gps_tag, gps_tag)
-            gps_data[gps_tag_name] = gps_info[gps_tag]
+                # break
 
         # Extract latitude and longitude
         lat = gps_data.get('GPSLatitude')
