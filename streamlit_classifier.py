@@ -125,7 +125,7 @@ def extract_gps_from_exif(image):
     Returns: dict with latitude, longitude or None if no GPS data
     """
     try:
-        exif_data = image._getexif()
+        exif_data = image.getexif()
         if not exif_data:
             return None
         
