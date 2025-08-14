@@ -496,7 +496,7 @@ def process_images(uploaded_files):
                     'image': image,
                     'predictions': predictions,
                     'timestamp': datetime.now().strftime("%H:%M:%S"),
-                    'file_size': uploaded_file.size
+                    'file_size': uploaded_file.size,
                     'gps_location': gps_location
                 }
                 
@@ -611,7 +611,7 @@ def display_result_card(result):
             else:
                 st.markdown('<div class="no-gps">📍 No GPS data available</div>', 
                            unsafe_allow_html=True)
-              
+
             # Predictions
             st.markdown("**🎯 Predictions:**")
             
