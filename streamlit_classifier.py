@@ -129,20 +129,26 @@ def extract_gps_from_exif(image):
         if not exif_data:
             return None
         
-        gps_data = {}
+        # Look for GPS info in EXIF data
+        gps_info = None
+
         for tag, value in exif_data.items():
             tag_name = TAGS.get(tag, tag)
             if tag_name == "GPSInfo":
-                gps_tag_name = GPSTAGS.get(value, value)
-                gps_data[gps_tag_name] = value[0]
+                gps_info = value
                 # for gps_tag in value:
                 #     gps_tag_name = GPSTAGS.get(gps_tag, gps_tag)
                 #     gps_data[gps_tag_name] = value[gps_tag]
-                # break
-        
-        if not gps_data:
+                break
+
+        if not gps_info:
             return None
         
+        gps_data = {}
+        for gps_tag in gps_info:
+            gps_tag_name = GPSTAGS.get(gps_tag, gps_tag)
+            gps_data[gps_tag_name] = gps_info[gps_tag]
+
         # Extract latitude and longitude
         lat = gps_data.get('GPSLatitude')
         lat_ref = gps_data.get('GPSLatitudeRef')
@@ -170,9 +176,16 @@ def convert_dms_to_dd(dms, ref):
     Convert DMS (Degrees, Minutes, Seconds) to Decimal Degrees
     """
     try:
-        degrees = float(dms[0])
-        minutes = float(dms[1])
-        seconds = float(dms[2])
+        if len(dms) >= 3:
+            degrees = float(dms[0])
+            minutes = float(dms[1]) 
+            seconds = float(dms[2])
+        elif len(dms) == 2:
+            degrees = float(dms[0])
+            minutes = float(dms[1])
+            seconds = 0.0
+        else:
+            return None
         
         dd = degrees + minutes/60 + seconds/3600
         
