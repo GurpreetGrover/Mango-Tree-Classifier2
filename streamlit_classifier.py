@@ -162,11 +162,11 @@ def extract_coordinates(gps_data):
         lon = gps_data.get('GPSLongitude')
         lon_ref = gps_data.get('GPSLongitudeRef')
         
-        print(f"GPS Components found:")
-        print(f"  Latitude: {lat} ({type(lat)})")
-        print(f"  Latitude Ref: {lat_ref}")
-        print(f"  Longitude: {lon} ({type(lon)})")
-        print(f"  Longitude Ref: {lon_ref}")
+        # print(f"GPS Components found:")
+        # print(f"  Latitude: {lat} ({type(lat)})")
+        # print(f"  Latitude Ref: {lat_ref}")
+        # print(f"  Longitude: {lon} ({type(lon)})")
+        # print(f"  Longitude Ref: {lon_ref}")
         
         if lat and lon and lat_ref and lon_ref:
             latitude = convert_dms_to_dd(lat, lat_ref)
@@ -506,6 +506,7 @@ def main():
         # Clear results button
         if st.button("🗑️ Clear All Results"):
             st.session_state.classification_results = []
+            st.session_state.duplicate_pairs = []
             st.session_state.uploader_key += 1
             st.rerun()
         # Display results
