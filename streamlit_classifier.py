@@ -268,8 +268,10 @@ def main():
                 unsafe_allow_html=True)
     
     # Load model on first run
+    st.write("checking if model is not loaded")
     if not st.session_state.model_loaded:
         with st.spinner("Loading AI model..."):
+            st.write("starting loading model")
             model_info = load_tensorflow_savedmodel(SAVEDMODEL_PATH)
             if model_info:
                 st.session_state.model = model_info
