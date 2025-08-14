@@ -505,7 +505,7 @@ def process_images(uploaded_files):
         except Exception as e:
             st.error(f"Error processing {uploaded_file.name}: {str(e)}")
     
-    if new_results:
+    if st.session_state.classification_results:
         st.session_state.duplicate_pairs = find_duplicate_pairs(
             st.session_state.classification_results, 
             st.session_state.threshold_distance
