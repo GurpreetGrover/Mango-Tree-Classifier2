@@ -12,6 +12,7 @@ import tempfile
 import os
 import math
 from itertools import combinations
+import uuid  # Added for unique ID generation
 
 # Configure Streamlit page
 st.set_page_config(
@@ -415,6 +416,12 @@ def classify_image_with_savedmodel(image, model_info):
         return None
 
 def main():
+
+
+    if st.session_state.clear_flag:
+        st.session_state.clear_flag = False
+        st.rerun()
+
     """Main Streamlit application"""
     # Header
     st.markdown('<h1 class="main-header">🥭 Mango Tree Classifier</h1>', 
@@ -509,7 +516,7 @@ def main():
             st.session_state.classification_results = []
             st.session_state.duplicate_pairs = []
             st.session_state.uploader_key += 1
-            uploaded_files = []
+            st.session_state.clear_flag = True
             st.rerun()
         # Display results
         for result in reversed(st.session_state.classification_results):  # Show newest first
@@ -569,7 +576,7 @@ def process_images(uploaded_files):
             if predictions:
                 # Create result object
                 result = {
-                    'id': len(st.session_state.classification_results) + 1,
+                    'id': str(uuid.uuid4()),  # Use UUID for unique ID,
                     'file_name': uploaded_file.name,
                     'image': image,
                     'predictions': predictions,
@@ -647,13 +654,14 @@ def display_duplicate_pair(pair):
     with action_col2:
         if st.button(f"Remove Image 1", key=f"remove_1_{pair['id']}"):
             st.session_state.duplicate_pairs.remove(pair)# = [p for p in st.session_state.duplicate_pairs if p['id'] != pair['id']]
+            remove_image_from_results(result1['id'])
             st.success(f"Removed {result1['file_name']}")
             st.rerun()
     
     with action_col3:
         if st.button(f"Remove Image 2", key=f"remove_2_{pair['id']}"):
-            remove_image_from_results(result2)
-            st.session_state.duplicate_pairs.remove(pair)# = [p for p in st.session_state.duplicate_pairs if p['id'] != pair['id']]
+            remove_image_from_results(result1['id'])
+            # st.session_state.duplicate_pairs.remove(pair) = [p for p in st.session_state.duplicate_pairs if p['id'] != pair['id']]
             st.success(f"Removed {result2['file_name']}")
             st.rerun()
     
@@ -665,6 +673,14 @@ def remove_image_from_results(image_id):
     st.session_state.classification_results = [
         r for r in st.session_state.classification_results if r['id'] != image_id
     ]
+
+
+    st.session_state.duplicate_pairs = find_duplicate_pairs(
+        st.session_state.classification_results,
+        st.session_state.threshold_distance
+    )
+
+
 
 def display_result_card(result):
     """
