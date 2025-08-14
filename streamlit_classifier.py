@@ -113,12 +113,11 @@ if 'duplicate_pairs' not in st.session_state:
     st.session_state.duplicate_pairs = []
 if 'threshold_distance' not in st.session_state:
     st.session_state.threshold_distance = 1.0  # 1 meter default
+if 'clear_flag' not in st.session_state:
+    st.session_state.clear_flag = False
 
 # Configuration - Update these paths for your SavedModel
 SAVEDMODEL_PATH = st.secrets.get("SAVEDMODEL_PATH", "./models/mango_classifier_savedmodel")
-# Alternative: You can also use a model from TensorFlow Hub or cloud storage
-# SAVEDMODEL_PATH = "gs://your-bucket/models/mango_classifier"
-# SAVEDMODEL_PATH = "https://tfhub.dev/your-model/1"
 
 def extract_gps_from_exif(image):
     """
@@ -132,15 +131,13 @@ def extract_gps_from_exif(image):
         
         gps_ifd = exif_data.get_ifd(IFD.GPSInfo)
         if gps_ifd:
-
             st.write("  ✅ Found GPS IFD")
-            # st.write(f"  GPS IFD contents: {dict(gps_ifd)}")
             return parse_gps_ifd(gps_ifd)
-
         else:
             st.write("  ❌ No GPS IFD found")
     except (ImportError, AttributeError) as e:
         print(f"  ❌ get_ifd() not available: {e}")
+    return None
 
 def parse_gps_ifd(gps_ifd):
     """Parse GPS data from IFD object"""
@@ -163,12 +160,6 @@ def extract_coordinates(gps_data):
         lon = gps_data.get('GPSLongitude')
         lon_ref = gps_data.get('GPSLongitudeRef')
         
-        # print(f"GPS Components found:")
-        # print(f"  Latitude: {lat} ({type(lat)})")
-        # print(f"  Latitude Ref: {lat_ref}")
-        # print(f"  Longitude: {lon} ({type(lon)})")
-        # print(f"  Longitude Ref: {lon_ref}")
-        
         if lat and lon and lat_ref and lon_ref:
             latitude = convert_dms_to_dd(lat, lat_ref)
             longitude = convert_dms_to_dd(lon, lon_ref)
@@ -186,50 +177,6 @@ def extract_coordinates(gps_data):
     except Exception as e:
         print(f"Error extracting coordinates: {e}")
         return None
-
-
-
-
-        # # Look for GPS info in EXIF data
-        # gps_info = None
-        # gps_info = exif_data.get(34853)
-
-        # if isinstance(gps_info, dict):
-        #     st.write(f"  GPSInfo value is not a dictionary, cannot parse GPS tags directly. Value: {gps_info}")
-        #     return None
-
-        # gps_data = {}
-        # for tag, gps_value in gps_info.items():
-        #     tag_name = GPSTAGS.get(tag, tag)
-        #     gps_data[gps_tag_name] = gps_value
-            # if tag_name == "GPSInfo":
-                # gps_info = value
-                # for gps_tag in value:
-                #     gps_tag_name = GPSTAGS.get(gps_tag, gps_tag)
-                #     gps_data[gps_tag_name] = value[gps_tag]
-                # break
-
-        # Extract latitude and longitude
-        # lat = gps_data.get('GPSLatitude')
-        # lat_ref = gps_data.get('GPSLatitudeRef')
-        # lon = gps_data.get('GPSLongitude')
-        # lon_ref = gps_data.get('GPSLongitudeRef')
-        
-        # if lat and lon and lat_ref and lon_ref:
-        #     latitude = convert_dms_to_dd(lat, lat_ref)
-        #     longitude = convert_dms_to_dd(lon, lon_ref)
-            
-        #     return {
-        #         'latitude': latitude,
-        #         'longitude': longitude,
-        #         'raw_gps_data': gps_data
-        #     }
-        
-        # return None
-        
-    # except Exception as e:
-    #     st.error(f"Error extracting GPS data: {str(e)}")
-    #     return None
 
 def convert_dms_to_dd(dms, ref):
     """
@@ -287,26 +234,31 @@ def find_duplicate_pairs(results, threshold_meters):
     # Get results with GPS data
     gps_results = [r for r in results if r.get('gps_location')]
     
+    # Need at least 2 images with GPS to find duplicates
     if len(gps_results) < 2:
         return duplicate_pairs
     
     # Check all combinations of images
-    for result1, result2 in combinations(gps_results, 2):
-        gps1 = result1['gps_location']
-        gps2 = result2['gps_location']
-        
-        distance = haversine_distance(
-            gps1['latitude'], gps1['longitude'],
-            gps2['latitude'], gps2['longitude']
-        )
-        
-        if distance <= threshold_meters:
-            duplicate_pairs.append({
-                'result1': result1,
-                'result2': result2,
-                'distance': distance,
-                'id': f"{result1['id']}_{result2['id']}"
-            })
+    for i, result1 in enumerate(gps_results):
+        for j, result2 in enumerate(gps_results):
+            if j <= i:  # Avoid duplicate pairs and self-comparison
+                continue
+                
+            gps1 = result1['gps_location']
+            gps2 = result2['gps_location']
+            
+            distance = haversine_distance(
+                gps1['latitude'], gps1['longitude'],
+                gps2['latitude'], gps2['longitude']
+            )
+            
+            if distance <= threshold_meters:
+                duplicate_pairs.append({
+                    'result1': result1,
+                    'result2': result2,
+                    'distance': distance,
+                    'id': f"{result1['id']}_{result2['id']}"
+                })
     
     return duplicate_pairs
 
@@ -314,7 +266,6 @@ def find_duplicate_pairs(results, threshold_meters):
 def load_tensorflow_savedmodel(model_path):
     """
     Load TensorFlow SavedModel from local path or URL
-    JavaScript equivalent: loadModel() function
     """
     try:
         st.info("🔄 Loading TensorFlow SavedModel...")
@@ -323,7 +274,6 @@ def load_tensorflow_savedmodel(model_path):
         model = keras.layers.TFSMLayer(SAVEDMODEL_PATH, call_endpoint='serving_default')
         
         # For Teachable Machine models, class labels are typically ordered
-        # You can customize this based on your specific model
         class_labels = ['mango_tree', 'not_mango_tree'] 
         
         st.success("✅ SavedModel loaded successfully!")
@@ -346,34 +296,21 @@ def load_tensorflow_savedmodel(model_path):
 def preprocess_image(image):
     """Preprocess image for prediction"""
     data = np.ndarray(shape=(1, 224, 224, 3), dtype=np.float32)
-    # # Resize image to model input size (typically 224x224 for Teachable Machine)
-    # image = image.resize((224, 224))
     
-    # Convert to RGB if not already
-    # if image.mode != 'RGB':
-    #     image = image.convert('RGB')
-
-    # image = Image.open("/content/papaya-plant-500x500.jpg").convert("RGB")
-
     size = (224, 224)
     image = ImageOps.fit(image, size, Image.Resampling.LANCZOS)
-
-
+    
     image_array = np.asarray(image)
-
-
+    
     # Convert to numpy array and normalize
     image_array = np.array(image_array.astype(np.float32)) / 255.0
-
-    data[0] = image_array
     
-    # # Add batch dimension
-    # image_array = np.expand_dims(image_array, axis=0)
+    data[0] = image_array
     
     return data
 
 def classify_image_with_savedmodel(image, model_info):
-    """Real image classification using TensorFlow SavedModel    """
+    """Real image classification using TensorFlow SavedModel"""
     try:
         if not model_info or 'model' not in model_info:
             raise ValueError("Model not properly loaded")
@@ -386,7 +323,7 @@ def classify_image_with_savedmodel(image, model_info):
 
         # Make prediction using the SavedModel
         with st.spinner("🔍 Classifying image..."):
-            predictions = model(processed_image)#, verbose=0)
+            predictions = model(processed_image)
 
         # Processing output of model classification
         prediction_tensor = predictions['sequential_3']
@@ -406,7 +343,7 @@ def classify_image_with_savedmodel(image, model_info):
             for pred in prediction_results:
                 pred['probability'] = pred['probability'] / total_prob
         
-        # Sort by probability (highest first) to match original behavior
+        # Sort by probability (highest first)
         prediction_results.sort(key=lambda x: x['probability'], reverse=True)
         
         return prediction_results
@@ -415,21 +352,21 @@ def classify_image_with_savedmodel(image, model_info):
         st.error(f"❌ Error during classification: {str(e)}")
         return None
 
+def clear_all_results():
+    """Properly clear all results and reset state"""
+    st.session_state.classification_results = []
+    st.session_state.duplicate_pairs = []
+    st.session_state.uploader_key += 1
+    st.session_state.clear_flag = True
+
 def main():
-
-
-
-    if 'classification_results' not in st.session_state:
-        st.session_state.classification_results = []
-    if 'duplicate_pairs' not in st.session_state:
-        st.session_state.duplicate_pairs = []
-
-
-    # if st.session_state.clear_flag:
-    #     st.session_state.clear_flag = False
-    #     st.rerun()
-
     """Main Streamlit application"""
+    
+    # Handle clear flag
+    if st.session_state.clear_flag:
+        st.session_state.clear_flag = False
+        st.rerun()
+    
     # Header
     st.markdown('<h1 class="main-header">🥭 Mango Tree Classifier</h1>', 
                 unsafe_allow_html=True)
@@ -457,7 +394,6 @@ def main():
         st.metric("Total Images", total_images)
         st.metric("Images with GPS", images_with_gps)
         st.metric("Duplicate Pairs", total_duplicates)
-   
 
     # Load model on first run
     if not st.session_state.model_loaded:
@@ -473,14 +409,6 @@ def main():
                     st.write(f"**Model Path:** `{SAVEDMODEL_PATH}`")
                     st.write(f"**Classes:** {', '.join(model_info['labels'])}")
                     st.write(f"**Model Type:** TensorFlow SavedModel")
-                    
-                    # # Display model architecture summary if available
-                    # try:
-                    #     model_summary = []
-                    #     model_info['model'].summary(print_fn=lambda x: model_summary.append(x))
-                    #     st.code('\n'.join(model_summary[:10]) + '\n...' if len(model_summary) > 10 else '\n'.join(model_summary))
-                    # except:
-                    #     st.write("Model architecture details not available")
             else:
                 st.error("❌ Failed to load SavedModel. Please check the model path.")
                 st.stop()
@@ -500,8 +428,8 @@ def main():
     if uploaded_files:
         st.markdown(f"**{len(uploaded_files)} file(s) uploaded**")
         # Process button
-        process_images(uploaded_files)
-   
+        if st.button("🎯 Classify Images", type="primary"):
+            process_images(uploaded_files)
     
     st.markdown('</div>', unsafe_allow_html=True)
     
@@ -518,13 +446,9 @@ def main():
         st.markdown("## 📋 Classification Results")
         
         # Clear results button
-        if st.button("🗑️ Clear All Results"):
-            predictions = []
-            st.session_state.classification_results = []
-            st.session_state.duplicate_pairs = []
-            st.session_state.uploader_key += 1
-            # st.session_state.clear_flag = True
-            st.rerun()
+        if st.button("🗑️ Clear All Results", type="secondary"):
+            clear_all_results()
+            
         # Display results
         for result in reversed(st.session_state.classification_results):  # Show newest first
             display_result_card(result)
@@ -533,24 +457,19 @@ def main():
         # Empty state
         st.markdown("### 💡 Instructions")
         st.info("""
-        1. 📁 **Prepare your SavedModel**: Make sure you have a TensorFlow SavedModel directory
+        1. 📍 **Prepare your SavedModel**: Make sure you have a TensorFlow SavedModel directory
         2. 📂 **Update model path**: Set `SAVEDMODEL_PATH` in your code or Streamlit secrets
-        3. 🔍 **Upload images**: Use the file uploader above to select your images
+        3. 🖼 **Upload images**: Use the file uploader above to select your images
         4. 📊 **View results**: Click 'Classify Images' to analyze your photos
         5. 🥭 **Get predictions**: The AI will classify each image with confidence scores
-        6. 📍 **Duplicate detection**: Images with GPS data will be checked for proximity
+        6. 🔍 **Duplicate detection**: Images with GPS data will be checked for proximity
         7. ⚙️ **Adjust threshold**: Use the sidebar to change duplicate detection sensitivity
         
         **GPS Requirements:**
         - Images must contain EXIF GPS metadata
         - Supported formats: JPG, JPEG (PNG typically doesn't contain GPS data)
         - GPS coordinates will be displayed when available
-        """
-        # **SavedModel Requirements:**
-        # - Model should accept images of shape (224, 224, 3)
-        # - Input should be normalized to [0, 1] range
-        # - Output should be class probabilities
-        )
+        """)
 
 def process_images(uploaded_files):
     """Process multiple uploaded images"""
@@ -581,9 +500,9 @@ def process_images(uploaded_files):
             predictions = classify_image_with_savedmodel(image, st.session_state.model)
 
             if predictions:
-                # Create result object
+                # Create result object with unique ID
                 result = {
-                    'id': str(uuid.uuid4()),  # Use UUID for unique ID,
+                    'id': str(uuid.uuid4()),  # Use UUID for unique ID
                     'file_name': uploaded_file.name,
                     'image': image,
                     'predictions': predictions,
@@ -593,7 +512,6 @@ def process_images(uploaded_files):
                 }
                 
                 new_results.append(result)
-                # st.session_state.classification_results.append(result)
         
         except Exception as e:
             st.error(f"Error processing {uploaded_file.name}: {str(e)}")
@@ -601,28 +519,26 @@ def process_images(uploaded_files):
     # Add new results to session state
     st.session_state.classification_results.extend(new_results)
 
-    # Clear duplicate pairs before checking (important!)
-    st.session_state.duplicate_pairs = []
-
-    if st.session_state.classification_results:
-        st.session_state.duplicate_pairs = find_duplicate_pairs(
-            st.session_state.classification_results, 
-            st.session_state.threshold_distance
-        )
+    # Recalculate duplicate pairs for ALL results
+    st.session_state.duplicate_pairs = find_duplicate_pairs(
+        st.session_state.classification_results, 
+        st.session_state.threshold_distance
+    )
 
     # Clear progress indicators
     progress_bar.empty()
     status_text.empty()
     
-    gps_count = len([r for r in st.session_state.classification_results if r['gps_location']])
+    # Show summary
+    gps_count = len([r for r in new_results if r['gps_location']])
     duplicate_count = len(st.session_state.duplicate_pairs)
 
-    st.success(f"✅ Successfully processed {total_files} image(s)!")
+    st.success(f"✅ Successfully processed {len(new_results)} image(s)!")
 
     if gps_count > 0:
         st.info(f"📍 Found GPS data in {gps_count} image(s)")
     if duplicate_count > 0:
-        st.warning(f"⚠️ Found {duplicate_count} potential duplicate pair(s)")
+        st.warning(f"⚠️ Found {duplicate_count} potential duplicate pair(s) in total")
 
 def display_duplicate_pair(pair):
     """Display duplicate pair information"""
@@ -637,14 +553,14 @@ def display_duplicate_pair(pair):
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown(f"**📁 {result1['file_name']}**")
+        st.markdown(f"**📍 {result1['file_name']}**")
         st.image(result1['image'], caption=f"Image 1: {result1['file_name']}", use_container_width=True)
         if result1['gps_location']:
             gps = result1['gps_location']
             st.markdown(f"📍 GPS: {gps['latitude']:.6f}, {gps['longitude']:.6f}")
     
     with col2:
-        st.markdown(f"**📁 {result2['file_name']}**")
+        st.markdown(f"**📍 {result2['file_name']}**")
         st.image(result2['image'], caption=f"Image 2: {result2['file_name']}", use_container_width=True)
         if result2['gps_location']:
             gps = result2['gps_location']
@@ -660,40 +576,32 @@ def display_duplicate_pair(pair):
     
     with action_col2:
         if st.button(f"Remove Image 1", key=f"remove_1_{pair['id']}"):
-            st.session_state.duplicate_pairs.remove(pair)# = [p for p in st.session_state.duplicate_pairs if p['id'] != pair['id']]
             remove_image_from_results(result1['id'])
-            st.success(f"Removed {result1['file_name']}")
             st.rerun()
     
     with action_col3:
         if st.button(f"Remove Image 2", key=f"remove_2_{pair['id']}"):
-            remove_image_from_results(result1['id'])
-            # st.session_state.duplicate_pairs.remove(pair) = [p for p in st.session_state.duplicate_pairs if p['id'] != pair['id']]
-            st.success(f"Removed {result2['file_name']}")
+            remove_image_from_results(result2['id'])
             st.rerun()
     
     st.markdown('</div>', unsafe_allow_html=True)
     st.markdown("---")
 
 def remove_image_from_results(image_id):
-    """Remove an image from classification results"""
+    """Remove an image from classification results and update duplicate pairs"""
+    # Remove from results
     st.session_state.classification_results = [
         r for r in st.session_state.classification_results if r['id'] != image_id
     ]
-
-
+    
+    # Recalculate duplicate pairs
     st.session_state.duplicate_pairs = find_duplicate_pairs(
         st.session_state.classification_results,
         st.session_state.threshold_distance
     )
 
-
-
 def display_result_card(result):
-    """
-    Display individual result card
-    JavaScript equivalent: Result card in results grid
-    """
+    """Display individual result card"""
     with st.container():
         st.markdown('<div class="result-card">', unsafe_allow_html=True)
         
@@ -706,9 +614,9 @@ def display_result_card(result):
         
         with col2:
             # File info
-            st.markdown(f"**📁 {result['file_name']}**")
-            st.markdown(f"🕒 Processed at {result['timestamp']}")
-            st.markdown(f"📏 Size: {result['file_size']} bytes")
+            st.markdown(f"**📍 {result['file_name']}**")
+            st.markdown(f"🕐 Processed at {result['timestamp']}")
+            st.markdown(f"📏 Size: {result['file_size']:,} bytes")
             
             # GPS info
             if result['gps_location']:
