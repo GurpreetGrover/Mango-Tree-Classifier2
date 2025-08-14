@@ -290,6 +290,7 @@ def main():
                     # except:
                     #     st.write("Model architecture details not available")
             else:
+                st.write("tried load_tensorflow_savedmodel")
                 st.error("❌ Failed to load SavedModel. Please check the model path.")
                 st.stop()
     
