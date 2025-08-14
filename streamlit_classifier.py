@@ -132,8 +132,8 @@ def extract_gps_from_exif(image):
         gps_ifd = exif_data.get_ifd(IFD.GPSInfo)
         if gps_ifd:
 
-            st.write(f"  ✅ Found GPS IFD: {type(gps_ifd)}")
-            st.write(f"  GPS IFD contents: {dict(gps_ifd)}")
+            st.write("  ✅ Found GPS IFD")
+            # st.write(f"  GPS IFD contents: {dict(gps_ifd)}")
             return parse_gps_ifd(gps_ifd)
 
         else:
