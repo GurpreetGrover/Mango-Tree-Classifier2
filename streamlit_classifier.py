@@ -508,6 +508,7 @@ def main():
             st.session_state.classification_results = []
             st.session_state.duplicate_pairs = []
             st.session_state.uploader_key += 1
+            uploaded_files = []
             st.rerun()
         # Display results
         for result in reversed(st.session_state.classification_results):  # Show newest first
