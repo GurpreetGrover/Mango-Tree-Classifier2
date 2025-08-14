@@ -546,6 +546,7 @@ def process_images(uploaded_files):
     status_text = st.empty()
     
     total_files = len(uploaded_files)
+    new_results = []
     
     for i, uploaded_file in enumerate(uploaded_files):
         # Update progress
@@ -575,11 +576,18 @@ def process_images(uploaded_files):
                     'gps_location': gps_location
                 }
                 
-                st.session_state.classification_results.append(result)
+                new_results.append(result)
+                # st.session_state.classification_results.append(result)
         
         except Exception as e:
             st.error(f"Error processing {uploaded_file.name}: {str(e)}")
     
+    # Add new results to session state
+    st.session_state.classification_results.extend(new_results)
+
+    # Clear duplicate pairs before checking (important!)
+    st.session_state.duplicate_pairs = []
+
     if st.session_state.classification_results:
         st.session_state.duplicate_pairs = find_duplicate_pairs(
             st.session_state.classification_results, 
