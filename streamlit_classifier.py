@@ -134,7 +134,7 @@ def extract_gps_from_exif(image):
             tag_name = TAGS.get(tag, tag)
             if tag_name == "GPSInfo":
                 gps_tag_name = GPSTAGS.get(value, value)
-                gps_data[gps_tag_name] = value[gps_tag]
+                gps_data[gps_tag_name] = value[0]
                 # for gps_tag in value:
                 #     gps_tag_name = GPSTAGS.get(gps_tag, gps_tag)
                 #     gps_data[gps_tag_name] = value[gps_tag]
