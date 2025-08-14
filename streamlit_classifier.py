@@ -3,7 +3,7 @@ import tensorflow as tf
 from tensorflow import keras
 import numpy as np
 from PIL import Image, ImageOps
-from PIL.ExifTags import TAGS, GPSTAGS
+from PIL.ExifTags import TAGS, GPSTAGS, IFD
 import requests
 import json
 from datetime import datetime
@@ -129,30 +129,44 @@ def extract_gps_from_exif(image):
         if not exif_data:
             return None
         
-        # Look for GPS info in EXIF data
-        gps_info = None
-        gps_info = exif_data.get(34853)
+        gps_ifd = exif_data.get_ifd(IFD.GPSInfo)
+        if gps_ifd:
 
-        if isinstance(gps_info, dict):
-            st.write(f"  GPSInfo value is not a dictionary, cannot parse GPS tags directly. Value: {gps_info}")
-            return None
+            st.write(f"  ✅ Found GPS IFD: {type(gps_ifd)}")
+            st.write(f"  GPS IFD contents: {dict(gps_ifd)}")
+            return parse_gps_ifd(gps_ifd)
 
+        else:
+            st.write("  ❌ No GPS IFD found")
+    except (ImportError, AttributeError) as e:
+        print(f"  ❌ get_ifd() not available: {e}")
+
+def parse_gps_ifd(gps_ifd):
+    """Parse GPS data from IFD object"""
+    try:
         gps_data = {}
-        for tag, gps_value in gps_info.items():
-            tag_name = GPSTAGS.get(tag, tag)
-            gps_data[gps_tag_name] = gps_value
-            # if tag_name == "GPSInfo":
-                # gps_info = value
-                # for gps_tag in value:
-                #     gps_tag_name = GPSTAGS.get(gps_tag, gps_tag)
-                #     gps_data[gps_tag_name] = value[gps_tag]
-                # break
+        for gps_tag in gps_ifd:
+            gps_tag_name = GPSTAGS.get(gps_tag, gps_tag)
+            gps_data[gps_tag_name] = gps_ifd[gps_tag]
+            
+        return extract_coordinates(gps_data)
+    except Exception as e:
+        print(f"Error parsing GPS IFD: {e}")
+        return None
 
-        # Extract latitude and longitude
+def extract_coordinates(gps_data):
+    """Extract lat/lon from parsed GPS data"""
+    try:
         lat = gps_data.get('GPSLatitude')
         lat_ref = gps_data.get('GPSLatitudeRef')
         lon = gps_data.get('GPSLongitude')
         lon_ref = gps_data.get('GPSLongitudeRef')
+        
+        print(f"GPS Components found:")
+        print(f"  Latitude: {lat} ({type(lat)})")
+        print(f"  Latitude Ref: {lat_ref}")
+        print(f"  Longitude: {lon} ({type(lon)})")
+        print(f"  Longitude Ref: {lon_ref}")
         
         if lat and lon and lat_ref and lon_ref:
             latitude = convert_dms_to_dd(lat, lat_ref)
@@ -161,14 +175,60 @@ def extract_gps_from_exif(image):
             return {
                 'latitude': latitude,
                 'longitude': longitude,
-                'raw_gps_data': gps_data
+                'lat_ref': lat_ref,
+                'lon_ref': lon_ref
             }
-        
-        return None
-        
+        else:
+            print("❌ Missing GPS components")
+            return None
+            
     except Exception as e:
-        st.error(f"Error extracting GPS data: {str(e)}")
+        print(f"Error extracting coordinates: {e}")
         return None
+
+
+
+
+        # # Look for GPS info in EXIF data
+        # gps_info = None
+        # gps_info = exif_data.get(34853)
+
+        # if isinstance(gps_info, dict):
+        #     st.write(f"  GPSInfo value is not a dictionary, cannot parse GPS tags directly. Value: {gps_info}")
+        #     return None
+
+        # gps_data = {}
+        # for tag, gps_value in gps_info.items():
+        #     tag_name = GPSTAGS.get(tag, tag)
+        #     gps_data[gps_tag_name] = gps_value
+            # if tag_name == "GPSInfo":
+                # gps_info = value
+                # for gps_tag in value:
+                #     gps_tag_name = GPSTAGS.get(gps_tag, gps_tag)
+                #     gps_data[gps_tag_name] = value[gps_tag]
+                # break
+
+        # Extract latitude and longitude
+        # lat = gps_data.get('GPSLatitude')
+        # lat_ref = gps_data.get('GPSLatitudeRef')
+        # lon = gps_data.get('GPSLongitude')
+        # lon_ref = gps_data.get('GPSLongitudeRef')
+        
+        # if lat and lon and lat_ref and lon_ref:
+        #     latitude = convert_dms_to_dd(lat, lat_ref)
+        #     longitude = convert_dms_to_dd(lon, lon_ref)
+            
+        #     return {
+        #         'latitude': latitude,
+        #         'longitude': longitude,
+        #         'raw_gps_data': gps_data
+        #     }
+        
+        # return None
+        
+    # except Exception as e:
+    #     st.error(f"Error extracting GPS data: {str(e)}")
+    #     return None
 
 def convert_dms_to_dd(dms, ref):
     """
