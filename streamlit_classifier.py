@@ -505,7 +505,7 @@ def main():
         
         # Clear results button
         if st.button("🗑️ Clear All Results"):
-            st.session_state.classification_results = []
+            # st.session_state.classification_results = []
             st.session_state.duplicate_pairs = []
             st.session_state.uploader_key += 1
             uploaded_files = []
