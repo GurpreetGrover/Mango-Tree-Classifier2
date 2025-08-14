@@ -2,7 +2,6 @@ import streamlit as st
 import tensorflow as tf
 from tensorflow import keras
 import numpy as np
-# from PIL import Image
 from PIL import Image, ImageOps
 import requests
 import json
@@ -73,6 +72,8 @@ if 'model' not in st.session_state:
     st.session_state.model = None
 if 'model_loaded' not in st.session_state:
     st.session_state.model_loaded = False
+if "uploader_key" not in st.session_state:
+    st.session_state.uploader_key = 0
 if 'classification_results' not in st.session_state:
     st.session_state.classification_results = []
 
@@ -163,16 +164,16 @@ def classify_image_with_savedmodel(image, model_info):
         # Preprocess the image for the model
         processed_image = preprocess_image(image)
         
-        st.write("image preprocessed for classification")
+        # st.write("image preprocessed for classification")
 
         # Make prediction using the SavedModel
         with st.spinner("🔍 Classifying image..."):
             predictions = model(processed_image)#, verbose=0)
-        st.write("prediction done")
+        # st.write("prediction done")
 
         # Processing output of model classification
         prediction_tensor = predictions['sequential_3']
-        st.write("prediction tensor extracted")
+        # st.write("prediction tensor extracted")
         prediction_results = []
 
         for index, prob in enumerate(prediction_tensor[0]):
@@ -180,7 +181,7 @@ def classify_image_with_savedmodel(image, model_info):
                 'className': labels[index],
                 'probability': float(f'{np.float32(prob):.2f}')
                 })
-        st.write("class prob stored")
+        # st.write("class prob stored")
 
 
         # # Handle different output formats
@@ -213,48 +214,48 @@ def classify_image_with_savedmodel(image, model_info):
         st.error(f"❌ Error during classification: {str(e)}")
         return None
 
-def display_predictions(predictions, image_name):
-    """
-    Display prediction results
-    JavaScript equivalent: Predictions display in result card
-    """
-    st.markdown(f"### 📊 Results for {image_name}")
+# def display_predictions(predictions, image_name):
+#     """
+#     Display prediction results
+#     JavaScript equivalent: Predictions display in result card
+#     """
+#     st.markdown(f"### 📊 Results for {image_name}")
     
-    # Sort predictions by priority (mango_tree first, then by probability)
-    def get_prediction_priority(pred):
-        if pred['className'].lower() == 'mango_tree':
-            return (1, -pred['probability'])
-        elif pred['className'].lower() == 'not_mango_tree':
-            return (2, -pred['probability'])
-        else:
-            return (3, -pred['probability'])
+#     # Sort predictions by priority (mango_tree first, then by probability)
+#     def get_prediction_priority(pred):
+#         if pred['className'].lower() == 'mango_tree':
+#             return (1, -pred['probability'])
+#         elif pred['className'].lower() == 'not_mango_tree':
+#             return (2, -pred['probability'])
+#         else:
+#             return (3, -pred['probability'])
     
-    sorted_predictions = sorted(predictions, key=get_prediction_priority)
+#     sorted_predictions = sorted(predictions, key=get_prediction_priority)
     
-    for i, pred in enumerate(sorted_predictions):
-        class_name = pred['className']
-        probability = pred['probability']
-        percentage = probability * 100
+#     for i, pred in enumerate(sorted_predictions):
+#         class_name = pred['className']
+#         probability = pred['probability']
+#         percentage = probability * 100
         
-        # Determine color based on class
-        if class_name.lower() == 'mango_tree':
-            color = '#4CAF50'  # Green
-        elif class_name.lower() == 'not_mango_tree':
-            color = '#f44336'  # Red  
-        else:
-            color = '#2196F3'  # Blue
+#         # Determine color based on class
+#         if class_name.lower() == 'mango_tree':
+#             color = '#4CAF50'  # Green
+#         elif class_name.lower() == 'not_mango_tree':
+#             color = '#f44336'  # Red  
+#         else:
+#             color = '#2196F3'  # Blue
         
-        # Display prediction with progress bar
-        col1, col2 = st.columns([3, 1])
+#         # Display prediction with progress bar
+#         col1, col2 = st.columns([3, 1])
         
-        with col1:
-            st.markdown(f"**{class_name}**")
-            st.progress(probability)
+#         with col1:
+#             st.markdown(f"**{class_name}**")
+#             st.progress(probability)
         
-        with col2:
-            st.markdown(f"**{percentage:.1f}%**")
+#         with col2:
+#             st.markdown(f"**{percentage:.1f}%**")
         
-        st.markdown("---")
+#         st.markdown("---")
 
 def main():
     """
@@ -268,10 +269,8 @@ def main():
                 unsafe_allow_html=True)
     
     # Load model on first run
-    st.write("checking if model is not loaded")
     if not st.session_state.model_loaded:
         with st.spinner("Loading AI model..."):
-            st.write("starting loading model")
             model_info = load_tensorflow_savedmodel(SAVEDMODEL_PATH)
             if model_info:
                 st.session_state.model = model_info
@@ -292,7 +291,6 @@ def main():
                     # except:
                     #     st.write("Model architecture details not available")
             else:
-                st.write("tried load_tensorflow_savedmodel")
                 st.error("❌ Failed to load SavedModel. Please check the model path.")
                 st.stop()
     
@@ -304,12 +302,12 @@ def main():
         "Choose image files",
         type=['jpg', 'jpeg', 'png', 'bmp', 'gif'],
         accept_multiple_files=True,
-        help="Select one or more image files for classification"
+        help="Select one or more image files for classification",
+        key=f"uploader_{st.session_state.uploader_key}"
     )
     
     if uploaded_files:
         st.markdown(f"**{len(uploaded_files)} file(s) uploaded**")
-        
         # Process button
         process_images(uploaded_files)
         
@@ -325,8 +323,8 @@ def main():
         # Clear results button
         if st.button("🗑️ Clear All Results"):
             st.session_state.classification_results = []
+            st.session_state.uploader_key += 1
             st.rerun()
-        
         # Display results
         for result in reversed(st.session_state.classification_results):  # Show newest first
             display_result_card(result)
@@ -374,7 +372,7 @@ def process_images(uploaded_files):
             # Classify image
             predictions = classify_image_with_savedmodel(image, st.session_state.model)
             
-            st.write("all images classified")
+            # st.write("all images classified")
 
             if predictions:
                 # Create result object
